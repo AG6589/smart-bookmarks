@@ -34,6 +34,22 @@ A modern, real-time bookmark manager built with **Next.js 15**, **Supabase**, an
 
 - Realtime event subscriptions
 
+🔧 Challenges Faced & How I Solved Them
+1. OAuth Redirect Error
+
+- After Google login the app redirected to an error page.
+
+- Cause: Supabase redirect URL did not match Next.js callback route.
+
+- Solution:
+Configured correct URLs:
+
+http://localhost:3000/auth/callback
+https://smart-bookmarks-rho.vercel.app/auth/callback
+
+Handled session exchange using:
+supabase.auth.exchangeCodeForSession(code)
+
 Debugging local vs production environment issues
 ## 🚀 Getting Started
 
