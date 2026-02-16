@@ -24,6 +24,17 @@ A modern, real-time bookmark manager built with **Next.js 15**, **Supabase**, an
 - **Icons**: [Lucide React](https://lucide.dev/)
 - **Language**: TypeScript
 
+📚 What I Learned
+
+- OAuth authentication flow in real applications
+
+- Secure multi-user database design using RLS
+
+- Difference between server and client logic in Next.js
+
+- Realtime event subscriptions
+
+Debugging local vs production environment issues
 ## 🚀 Getting Started
 
 Follow these steps to run the project locally.
