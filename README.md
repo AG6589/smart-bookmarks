@@ -50,6 +50,18 @@ https://smart-bookmarks-rho.vercel.app/auth/callback
 Handled session exchange using:
 supabase.auth.exchangeCodeForSession(code)
 
+4. Realtime Not Working
+
+Bookmarks appeared only after refresh.
+
+Cause: Table not added to Supabase realtime publication.
+
+Solution:
+
+alter publication supabase_realtime add table bookmarks;
+
+Then subscribed to database changes in React.
+
 Debugging local vs production environment issues
 ## 🚀 Getting Started
 
