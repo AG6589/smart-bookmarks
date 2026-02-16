@@ -4,6 +4,9 @@ import { createClient } from '@/utils/supabase/client'
 import { useEffect, useState, useRef } from 'react'
 import { Trash2, Plus, ExternalLink, Hash } from 'lucide-react'
 
+import { addBookmark, deleteBookmark } from '@/app/actions/bookmark'
+import { useRouter } from 'next/navigation' // Keep for now if needed, but we rely on client fetch
+
 type Bookmark = {
     id: string
     title: string
@@ -13,147 +16,185 @@ type Bookmark = {
 }
 
 export default function BookmarkApp({ user, initialBookmarks }: { user: any, initialBookmarks: Bookmark[] }) {
-    const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks)
-    const [newUrl, setNewUrl] = useState('')
-    const [newTitle, setNewTitle] = useState('')
-    const [loading, setLoading] = useState(false)
+    const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks || [])
+    const [isModalOpen, setIsModalOpen] = useState(false)
     const supabase = createClient()
-    const listRef = useRef<HTMLDivElement>(null)
+    const router = useRouter()
 
+    const fetchBookmarks = async () => {
+        const { data } = await supabase
+            .from('bookmarks')
+            .select('*')
+            .order('created_at', { ascending: false })
+
+        setBookmarks(data || [])
+    }
+
+    // Load initial data (Client-side fetch as requested)
     useEffect(() => {
-        // Realtime subscription
+        fetchBookmarks()
+    }, [])
+
+    // Realtime subscription
+    useEffect(() => {
         const channel = supabase
-            .channel('realtime-bookmarks')
+            .channel('bookmarks-live')
             .on(
                 'postgres_changes',
                 {
                     event: '*',
                     schema: 'public',
                     table: 'bookmarks',
-                    filter: `user_id=eq.${user.id}`, // Filter by user_id just in case
                 },
                 (payload) => {
                     console.log('Realtime change:', payload)
-                    if (payload.eventType === 'INSERT') {
-                        setBookmarks((prev) => [payload.new as Bookmark, ...prev])
-                    } else if (payload.eventType === 'DELETE') {
-                        setBookmarks((prev) => prev.filter((b) => b.id !== payload.old.id))
-                    }
+                    fetchBookmarks() // reload automatically
                 }
             )
-            .subscribe()
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('Realtime connected!')
+                }
+            })
 
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [supabase, user.id])
+    }, [])
 
-    const addBookmark = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!newUrl || !newTitle) return
-
-        setLoading(true)
-        const { error } = await supabase.from('bookmarks').insert({
-            title: newTitle,
-            url: newUrl,
-            user_id: user.id
-        })
-
-        if (error) {
-            alert('Error adding bookmark: ' + error.message)
-        } else {
-            setNewTitle('')
-            setNewUrl('')
-        }
-        setLoading(false)
-    }
-
-    const deleteBookmark = async (id: string) => {
-        const { error } = await supabase.from('bookmarks').delete().eq('id', id)
-        if (error) {
-            alert('Error deleting bookmark')
+    // Helper to extract domain for favicon
+    const getFaviconUrl = (url: string) => {
+        try {
+            // Use Google's favicon service for reliable high-res icons
+            return `https://www.google.com/s2/favicons?sz=64&domain_url=${url}`
+        } catch {
+            return ''
         }
     }
 
     return (
-        <div className="max-w-4xl mx-auto p-6 md:p-12">
-            <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                    <Hash className="w-8 h-8 text-indigo-500" />
-                    Smart Bookmarks
-                </h1>
-                <button
-                    onClick={() => supabase.auth.signOut()}
-                    className="text-sm bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 px-4 py-2 rounded-lg transition-colors"
-                >
-                    Sign Out
-                </button>
-            </div>
+        <div className="min-h-screen bg-[#1F1F1F] text-white p-8 font-sans">
+            <div className="max-w-6xl mx-auto">
+                <div className="flex justify-end mb-12">
+                    <button
+                        onClick={async () => {
+                            await supabase.auth.signOut()
+                            router.refresh()
+                        }}
+                        className="text-sm bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full transition-colors backdrop-blur-sm"
+                    >
+                        Sign Out
+                    </button>
+                </div>
 
-            {/* Add New Bookmark Form */}
-            <form onSubmit={addBookmark} className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-xl flex flex-col md:flex-row gap-4 mb-8 border border-gray-100 dark:border-gray-800">
-                <input
-                    type="text"
-                    placeholder="Bookmark Title"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    className="flex-1 bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
-                    required
-                />
-                <input
-                    type="url"
-                    placeholder="https://example.com"
-                    value={newUrl}
-                    onChange={(e) => setNewUrl(e.target.value)}
-                    className="flex-1 bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
-                    required
-                />
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-indigo-500/30 active:scale-95 disabled:opacity-50 flex items-center justify-center"
-                >
-                    {loading ? <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" /> : <Plus className="w-6 h-6" />}
-                </button>
-            </form>
-
-            {/* Bookmark List */}
-            <div className="grid gap-4" ref={listRef}>
-                {bookmarks.length === 0 ? (
-                    <div className="text-center py-12 text-gray-400">
-                        No bookmarks yet. Add one above!
-                    </div>
-                ) : (
-                    bookmarks.map((bookmark) => (
-                        <div
-                            key={bookmark.id}
-                            className="group bg-white dark:bg-gray-900 p-5 rounded-xl shadow-sm hover:shadow-md border border-gray-100 dark:border-gray-800 transition-all flex justify-between items-center animate-in fade-in slide-in-from-bottom-4 duration-300"
-                        >
-                            <div className="flex-1 min-w-0 pr-4">
-                                <h3 className="font-semibold text-lg text-gray-900 dark:text-white truncate">
-                                    {bookmark.title}
-                                </h3>
-                                <a
-                                    href={bookmark.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-500 truncate block flex items-center gap-1 group-hover:underline"
-                                >
-                                    {bookmark.url}
-                                    <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </a>
-                            </div>
-                            <button
-                                onClick={() => deleteBookmark(bookmark.id)}
-                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                aria-label="Delete bookmark"
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-8 justify-items-center">
+                    {/* Bookmark Items */}
+                    {bookmarks.map((bookmark) => (
+                        <div key={bookmark.id} className="group relative flex flex-col items-center gap-3 w-28 group">
+                            <a
+                                href={bookmark.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex flex-col items-center gap-3 w-full"
                             >
-                                <Trash2 className="w-5 h-5" />
-                            </button>
+                                <div className="w-12 h-12 bg-[#2D2D2D] rounded-full flex items-center justify-center p-2 shadow-lg hover:bg-[#3D3D3D] transition-all duration-200 ring-1 ring-white/5">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        src={getFaviconUrl(bookmark.url)}
+                                        alt={bookmark.title}
+                                        className="w-6 h-6 object-contain"
+                                        onError={(e) => {
+                                            // Fallback if image fails
+                                            (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                            (e.currentTarget.parentElement as HTMLElement).innerHTML = '<span class="text-xl">🌐</span>'
+                                        }}
+                                    />
+                                </div>
+                                <span className="text-sm text-center text-gray-200 truncate w-full px-2 group-hover:text-white transition-colors">
+                                    {bookmark.title}
+                                </span>
+                            </a>
+
+                            {/* Delete Button (Visible on Hover) */}
+                            <form action={deleteBookmark} className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+                                <input type="hidden" name="id" value={bookmark.id} />
+                                <button
+                                    type="submit"
+                                    className="bg-black/50 hover:bg-red-500/80 text-white rounded-full p-1 backdrop-blur-sm"
+                                    title="Remove shortcut"
+                                >
+                                    <div className="w-3 h-3 flex items-center justify-center">✕</div>
+                                </button>
+                            </form>
                         </div>
-                    ))
-                )}
+                    ))}
+
+                    {/* Add Shortcut Button */}
+                    <div className="flex flex-col items-center gap-3 w-28 cursor-pointer" onClick={() => setIsModalOpen(true)}>
+                        <div className="w-12 h-12 bg-[#2D2D2D] rounded-full flex items-center justify-center shadow-lg hover:bg-[#3D3D3D] transition-all duration-200 ring-1 ring-white/5">
+                            <Plus className="w-6 h-6 text-white" />
+                        </div>
+                        <span className="text-sm text-center text-gray-200">Add shortcut</span>
+                    </div>
+                </div>
             </div>
+
+            {/* Simple Modal for Adding Bookmark */}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
+                    if (e.target === e.currentTarget) setIsModalOpen(false)
+                }}>
+                    <div className="bg-[#2D2D2D] p-6 rounded-2xl w-full max-w-md shadow-2xl border border-white/10 animation-fadeIn">
+                        <h2 className="text-xl font-medium mb-6 text-center">Add shortcut</h2>
+                        <form
+                            action={async (formData) => {
+                                await addBookmark(formData)
+                                await fetchBookmarks()
+                                setIsModalOpen(false)
+                            }}
+                            className="flex flex-col gap-4"
+                        >
+                            <div>
+                                <label className="block text-xs font-medium text-gray-400 mb-1 ml-1">Name</label>
+                                <input
+                                    type="text"
+                                    name="title"
+                                    autoFocus
+                                    className="w-full bg-[#1F1F1F] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder-gray-500 transition-all"
+                                    placeholder="e.g. YouTube"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-400 mb-1 ml-1">URL</label>
+                                <input
+                                    type="url"
+                                    name="url"
+                                    className="w-full bg-[#1F1F1F] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder-gray-500 transition-all"
+                                    placeholder="https://example.com"
+                                    required
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-3 mt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    Done
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

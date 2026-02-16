@@ -22,20 +22,36 @@ export default function Login() {
     }
 
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center p-24 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white">
-            <div className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-white/20 w-full max-w-md text-center">
-                <h1 className="text-4xl font-bold mb-2 tracking-tight">Bookmarks</h1>
-                <p className="text-white/80 mb-8">Your private, smart bookmark manager.</p>
+        <div className="flex min-h-screen flex-col items-center justify-center p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-[#0a0a0a] to-black text-white relative overflow-hidden">
+            {/* Background Effects */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none opacity-30"></div>
+            <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-purple-500/10 rounded-full blur-[100px] pointer-events-none opacity-20"></div>
+
+            <div className="bg-white/5 backdrop-blur-2xl p-10 rounded-3xl shadow-2xl border border-white/10 w-full max-w-sm text-center relative z-10 animate-in fade-in zoom-in duration-500">
+                <div className="flex justify-center mb-8">
+                    <div className="w-16 h-16 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20 rotate-3 transform hover:rotate-6 transition-transform duration-300">
+                        <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                        </svg>
+                    </div>
+                </div>
+
+                <h1 className="text-3xl font-bold mb-3 tracking-tight bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent">
+                    Welcome Back
+                </h1>
+                <p className="text-gray-400 mb-10 text-sm font-medium leading-relaxed">
+                    Sync your bookmarks across devices<br />securely and instantly.
+                </p>
 
                 <button
                     onClick={handleLogin}
                     disabled={loading}
-                    className="w-full bg-white text-indigo-600 font-bold py-3 px-6 rounded-lg hover:bg-opacity-90 transition-all flex items-center justify-center gap-2 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-white text-black font-semibold py-3.5 px-6 rounded-xl hover:bg-gray-50 transition-all flex items-center justify-center gap-3 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_25px_rgba(255,255,255,0.2)]"
                 >
                     {loading ? (
-                        <span className="animate-spin h-5 w-5 border-2 border-indigo-600 border-t-transparent rounded-full"></span>
+                        <span className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></span>
                     ) : (
-                        <svg className="w-5 h-5" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5" width="20" height="20" viewBox="0 0 24 24">
                             <path
                                 fill="currentColor"
                                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -54,7 +70,7 @@ export default function Login() {
                             />
                         </svg>
                     )}
-                    Sign in with Google
+                    Continue with Google
                 </button>
             </div>
         </div>
