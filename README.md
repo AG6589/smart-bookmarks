@@ -2,7 +2,8 @@
 
 A modern, real-time bookmark manager built with **Next.js 15**, **Supabase**, and **Tailwind CSS**. Experience seamless bookmarking with instant synchronization across devices and a premium glassmorphism UI.
 
-![Smart Bookmarks Preview](https://placehold.co/1200x600/1F1F1F/white?text=Smart+Bookmarks+Preview)
+<img width="1919" height="907" alt="image" src="https://github.com/user-attachments/assets/cd85384a-bbc5-4b1c-8342-2b4e6efa7ebc" />
+
 
 ## ✨ Features
 
